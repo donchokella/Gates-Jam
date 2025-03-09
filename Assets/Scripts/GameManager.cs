@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using static System.Net.Mime.MediaTypeNames;
+using System;
+using UnityEngine.SocialPlatforms.Impl;
 
 public class GameManager : MonoBehaviour
 {
@@ -46,32 +49,59 @@ public class GameManager : MonoBehaviour
 
     private GameObject currentPatient;
 
-    // Sözlük artık hastalık adını (key) ve dört öğe içeren tuple'ı içeriyor.
-    // Tuple sırası: (requiredHerb, requiredMisc, requiredUsage, narrativeText)
+    // Yeni eklenen açılış ve kapanış cümleleri dizileri (rastgele seçim için)
+    private string[] openingSentences = new string[]
+    {
+        "İnanmayacaksınız ama",
+        "Şaka gibi ama",
+        "Doktor, halime bakın:",
+        "Of of, başıma gelenler:",
+        "Bu nasıl bir talih, anlamadım:",
+        "Başıma gelen pişmiş tavuğun başına gelmedi:",
+        "Yok artık, durum şöyle:",
+        "Komik gelecek ama",
+        "Durum vahim doktor,",
+        "Bir garip haldeyim:"
+    };
+
+    private string[] closingSentences = new string[]
+    {
+        "Gülsem mi ağlasam bilemiyorum.",
+        "Resmen perişan oldum.",
+        "Kendimi mutant gibi hissediyorum.",
+        "Bu gidişle Mars'a ışınlanacağım sanırım.",
+        "Durumum evlere şenlik, doğrusu.",
+        "İnanın ne yapacağımı şaşırdım.",
+        "Böyle hastalık görülmedi!",
+        "Galiba süper kahramana dönüşüyorum.",
+        "Lütfen bana bir çare bulun.",
+        "Böyle komedi olamaz!"
+    };
+
+    // symptomDictionary, excel dosyanızdaki veriler doğrultusunda oluşturulmuştur.
+    // Her hastalık için: (requiredHerb, requiredMisc, requiredUsage, narrativeText)
+    // narrativeText: İki semptom için toplam 4 varyant içermeli.
+    // Örneğin, Dizanteri için:
+    // "(iktidarsızlık_semptom_1_variant1). (iktidarsızlık_semptom_1_variant2). (bas_agrisi_semptom_2_variant1). (bas_agrisi_semptom_2_variant2)."
     private Dictionary<string, (string, string, string, string)> symptomDictionary = new Dictionary<string, (string, string, string, string)>
     {
-        {"Varicella", ("Rose", "OldSweat", "Shot", "Cildimde renkli döküntüler beliriyor. Kaşıntı sürekli devam ediyor. Kendimi adeta bir sanat eserine benzetiyorum.")},
-{"Dizanteri", ("Chili", "FrogLeg", "3TimesADay", "Karnım fırtınalı bir şekilde hareket ediyor. Yemek sonrası zorlanıyorum. Bu durum bazen komik, bazen de oldukça acı veriyor.")},
-{"Kusmalı zatürre", ("Garlic", "Leech", "PutYourHair", "Göğsümde şiddetli öksürükler var ve kusma refleksi neredeyse sürekli. Her nefes alışımda rahatsızlık duyuyorum. Bu durum beni gerçekten yıpratıyor.")},
-{"Hepatit Y", ("Rosemary", "Widow_Tear", "Inject", "Karaciğerimde yanma hissi var. İçimde sıcaklık artıyor ve bu durumun asla durmayacağını hissediyorum. Doktorlar şaşkınlıkla bakıyor.")},
-{"Tetanoz", ("TiptonWeed", "HagiaSophia", "GiveYourMama", "Kaslarım istemsizce kasılıyor ve vücudum sürekli kasılmalar yaşıyor. Sanki çekiçle dövülüyormuşum gibi hissediyorum. Bu durum hem korkutucu hem de ironik.")},
-{"Amipli Dizanteri", ("Rose", "FrogLeg", "Shot", "Karnımda kontrolsüz hareketler var. Yemek sonrası sürekli tuvalete koşmak zorunda kalıyorum. Durum sanki küçük amipler istilası gibi, hem sinir bozucu hem komik.")},
-{"Hepatit X", ("Chili", "OldSweat", "3TimesADay", "Vücudumun derinliklerinde sürekli yanma hissediyorum. İçimde kavruluyormuş gibi bir sıcaklık var. Bu durum gerçekten dayanılmaz oluyor.")},
-{"Influenza Plus", ("Garlic", "Leech", "PutYourHair", "Yüksek ateş ve titreme yüzünden yatağa düşmekten kurtulamıyorum. Nefes almak zorlaşıyor. Bazen bu durum bana adeta bir dram filmi yaşatıyor.")},
-{"Ishalli Grip", ("Rosemary", "Widow_Tear", "Inject", "Başımdan geçen grip belirtileri dayanılmaz. Sürekli terliyor, titriyorum. Bazen komik bir hal alsa da genel olarak moral bozucu bir durum.")},
-{"Ishalli Varicella", ("TiptonWeed", "HagiaSophia", "GiveYourMama", "Cildimde hem döküntüler hem de ishal belirtileri var. Hem kaşıntı var hem de sürekli tuvalete yetişmeye çalışıyorum. Bu durum hem utanç verici hem de komik anlar yaşatıyor.")},
-{"Influenza", ("Rose", "OldSweat", "Shot", "Yüksek ateş ve şiddetli öksürük beni adeta yıpratıyor. Her nefeste kendimi bitkin hissediyorum. Gün boyu dinlenmek zorundayım.")},
-{"Grip", ("Chili", "FrogLeg", "3TimesADay", "Ateşim var, vücudum titriyor ve öksürüklerim sürekli. Her şey çok halsizleştirici. Sanki bedenim bozulmuş gibi hissediyorum.")},
-{"Akut Difteri", ("Garlic", "Leech", "PutYourHair", "Boğazım şişiyor ve nefes almak neredeyse imkansız hale geliyor. Sesim kısılıyor. Bu dramatik durum hem korkutucu hem de komik görünebiliyor.")},
-{"Difteri", ("Rosemary", "Widow_Tear", "Inject", "Boğazımda sürekli bir tıkanıklık var. Konuşurken boğuk çıkıyorum. İnsanlar bana gülse de, ben durumumdan rahatsızım.")},
-{"Zatürre", ("TiptonWeed", "HagiaSophia", "GiveYourMama", "Göğsümde derin bir ağrı var ve nefes almak bile güçleşiyor. Her soluk alışımda acı hissediyorum. Kendimi çaresiz ve yorgun hissediyorum.")},
-{"Sarbiral Tetanoz", ("Rose", "FrogLeg", "Shot", "Kaslarım aniden kasılıyor ve sürekli sertleşiyor. Her adımım acı veriyor. Bu durum bazen sinir bozucu bazen de komik olabiliyor.")},
-{"Varicella_2", ("Chili", "Leech", "3TimesADay", "Cildimde yeniden döküntüler beliriyor ve kaşıntı şiddetleniyor. Her gün artan belirtilerle mücadele ediyorum. Durum bana tuhaf bir sanat eseri gibi geliyor.")},
-{"Dizanteri_2", ("Garlic", "OldSweat", "PutYourHair", "Karnımda fırtına kopuyor. Yemek sonrası tuvalet kaçamakları artık günlük rutinim haline geldi. Hem sinir bozucu hem de komik anlar yaşıyorum.")},
-{"Grip_2", ("Rosemary", "FrogLeg", "Inject", "Yüksek ateş, titreme ve halsizlik beni sarmış durumda. Her nefeste yorgunluk hissediyorum. Bazen bu durum komik bir trajediye dönüşüyor.")},
-{"Influenza_Plus", ("TiptonWeed", "HagiaSophia", "GiveYourMama", "Ateşim çok yüksek, vücudum titriyor ve öksürüklerim neredeyse sinema sahnesi gibi dramatik. Bu durum hem yıpratıcı hem de bazen güldürücü oluyor.")}
 
-
+    {"Varicella", ("Rose", "HagiaSophia", "Shot", "(varicella_semptom_1_variant1). (varicella_semptom_1_variant2). (varicella_semptom_2_variant1). (varicella_semptom_2_variant2).")},
+    {"Dizanteri", ("Chili", "HagiaSophia", "Shot", "(iktidarsızlık_semptom_1_variant1). (iktidarsızlık_semptom_1_variant2). (bas_agrisi_semptom_2_variant1). (bas_agrisi_semptom_2_variant2).")},
+    {"Kusmalı zatürre", ("Garlic", "HagiaSophia", "Inject", "(kusma_semptom_1_variant1). (kusma_semptom_1_variant2). (zatürre_semptom_2_variant1). (zatürre_semptom_2_variant2).")},
+    {"Hepatit Y", ("Rosemary", "OldSweat", "3TimesADay", "(hepatitY_semptom_1_variant1). (hepatitY_semptom_1_variant2). (hepatitY_semptom_2_variant1). (hepatitY_semptom_2_variant2).")},
+    {"Tetanoz", ("Rosemary", "OldSweat", "PutYourHair", "(tetanoz_semptom_1_variant1). (tetanoz_semptom_1_variant2). (tetanoz_semptom_2_variant1). (tetanoz_semptom_2_variant2).")},
+    {"Amipli Dizanteri", ("TiptonWeed", "OldSweat", "Inject", "(amipli_dizanteri_semptom_1_variant1). (amipli_dizanteri_semptom_1_variant2). (amipli_dizanteri_semptom_2_variant1). (amipli_dizanteri_semptom_2_variant2).")},
+    {"Hepatit X", ("Chili", "OldSweat", "PutYourHair", "(hepatitX_semptom_1_variant1). (hepatitX_semptom_1_variant2). (hepatitX_semptom_2_variant1). (hepatitX_semptom_2_variant2).")},
+    {"Influenza Plus", ("Rose", "FrogLeg", "PutYourHair", "(influenzaPlus_semptom_1_variant1). (influenzaPlus_semptom_1_variant2). (influenzaPlus_semptom_2_variant1). (influenzaPlus_semptom_2_variant2).")},
+    {"Ishalli Grip", ("TiptonWeed", "FrogLeg", "Shot", "(ishalliGrip_semptom_1_variant1). (ishalliGrip_semptom_1_variant2). (ishalliGrip_semptom_2_variant1). (ishalliGrip_semptom_2_variant2).")},
+    {"Ishalli Varicella", ("Garlic", "FrogLeg", "Inject", "(ishalliVaricella_semptom_1_variant1). (ishalliVaricella_semptom_1_variant2). (ishalliVaricella_semptom_2_variant1). (ishalliVaricella_semptom_2_variant2).")},
+    {"Influenza", ("Rose", "Leech", "GiveYourMama", "(influenza_semptom_1_variant1). (influenza_semptom_1_variant2). (influenza_semptom_2_variant1). (influenza_semptom_2_variant2).")},
+    {"Grip", ("TiptonWeed", "Leech", "3TimesADay", "(grip_semptom_1_variant1). (grip_semptom_1_variant2). (grip_semptom_2_variant1). (grip_semptom_2_variant2).")},
+    {"Akut Difteri", ("Garlic", "Leech", "GiveYourMama", "(akutDifteri_semptom_1_variant1). (akutDifteri_semptom_1_variant2). (akutDifteri_semptom_2_variant1). (akutDifteri_semptom_2_variant2).")},
+    {"Difteri", ("Rosemary", "Widow_Tear", "Inject", "(difteri_semptom_1_variant1). (difteri_semptom_1_variant2). (difteri_semptom_2_variant1). (difteri_semptom_2_variant2).")},
+    {"Zatürre", ("TiptonWeed", "Widow_Tear", "GiveYourMama", "(zaturre_semptom_1_variant1). (zaturre_semptom_1_variant2). (zaturre_semptom_2_variant1). (zaturre_semptom_2_variant2).")},
+    {"Sarbiral Tetanoz", ("Chili", "Widow_Tear", "Shot", "(sarbiralTetanoz_semptom_1_variant1). (sarbiralTetanoz_semptom_1_variant2). (sarbiralTetanoz_semptom_2_variant1). (sarbiralTetanoz_semptom_2_variant2).")}
     };
 
     void Start()
@@ -81,229 +111,253 @@ public class GameManager : MonoBehaviour
 
         foreach (Button btn in herbButtons)
         {
-
             btn.onClick.AddListener(() => { SelectHerb(btn.GetComponentInChildren<TMP_Text>().text); PlayButtonClickSound(); });
         }
         foreach (Button btn in miscButtons)
         {
-            btn.onClick.AddListener(() => { SelectMisc(btn.GetComponentInChildren<TMP_Text>().text); PlayButtonClickSound(); });
+            btn.onClick.AddListener(() => { SelectMisc(btn.GetComponentInChildren<TMP_Text>().text); PlayButtonClickSound();
+});
         }
         foreach (Button btn in usageButtons)
-        {
-            btn.onClick.AddListener(() => { SelectUsage(btn.GetComponentInChildren<TMP_Text>().text); PlayButtonClickSound(); });
-        }
+{
+    btn.onClick.AddListener(() => { SelectUsage(btn.GetComponentInChildren<TMP_Text>().text); PlayButtonClickSound(); });
+}
     }
 
     void SpawnPatient()
+{
+    if (patientPrefabs.Length > 0)
     {
-        if (patientPrefabs.Length > 0)
+        // Eski hasta nesnesini yok edip yenisini oluşturuyoruz.
+        Destroy(currentPatient);
+
+        int randomIndex = UnityEngine.Random.Range(0, patientPrefabs.Length);
+        currentPatient = Instantiate(patientPrefabs[randomIndex], spawn1.position, Quaternion.identity);
+        Debug.Log("Yeni hasta Spawn1'de belirdi.");
+        AssignRandomSymptom(currentPatient);
+
+        // Hasta geldiğinde semptom sesi çal
+        if (symptomSound != null) symptomSound.Play();
+    }
+}
+
+void AssignRandomSymptom(GameObject patient)
+{
+    Patient2D patientScript = patient.GetComponent<Patient2D>();
+    if (patientScript != null)
+    {
+        List<string> diseases = new List<string>(symptomDictionary.Keys);
+        string randomDisease = diseases[UnityEngine.Random.Range(0, diseases.Count)];
+        var entry = symptomDictionary[randomDisease];
+
+        // narrativeText içerisindeki 4 cümleyi ayırıyoruz.
+        string narrative = entry.Item4;
+        string[] parts = narrative.Split(new char[] { '.' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+        string symptom1 = "";
+        string symptom2 = "";
+        if (parts.Length >= 4)
         {
-            //if (currentPatient != null)
-            {
-                Destroy(currentPatient);
-            }
+            // İlk iki cümle, semptom1 varyantları
+            string[] symptom1Variants = new string[] { parts[0].Trim(), parts[1].Trim() };
+            // Son iki cümle, semptom2 varyantları
+            string[] symptom2Variants = new string[] { parts[2].Trim(), parts[3].Trim() };
 
-            int randomIndex = Random.Range(0, patientPrefabs.Length);
-            currentPatient = Instantiate(patientPrefabs[randomIndex], spawn1.position, Quaternion.identity);
-            Debug.Log("Yeni hasta Spawn1'de belirdi.");
-            AssignRandomSymptom(currentPatient);
-
-            // Hasta geldiğinde semptom sesi çal
-            if (symptomSound != null) symptomSound.Play();
+            symptom1 = symptom1Variants[UnityEngine.Random.Range(0, symptom1Variants.Length)];
+            symptom2 = symptom2Variants[UnityEngine.Random.Range(0, symptom2Variants.Length)];
         }
-    }
-
-    void AssignRandomSymptom(GameObject patient)
-    {
-        Patient2D patientScript = patient.GetComponent<Patient2D>();
-        if (patientScript != null)
+        else if (parts.Length >= 2)
         {
-            List<string> diseases = new List<string>(symptomDictionary.Keys);
-            string randomDisease = diseases[Random.Range(0, diseases.Count)];
-            var entry = symptomDictionary[randomDisease];
-
-            // Tam anlatım cümlesini symptomText olarak atıyoruz.
-            patientScript.symptomText = entry.Item4;
-            patientScript.requiredHerb = entry.Item1;
-            patientScript.requiredMisc = entry.Item2;
-            patientScript.requiredUsage = entry.Item3;
-
-            patientScript.UpdateSymptomUI();
-        }
-    }
-
-    public void SelectHerb(string herbName)
-    {
-        if (herbSelected) return;
-        herbSelected = true;
-        selectedHerb = herbName;
-        DisableButtonList(herbButtons);
-        TryCreatePotion();
-    }
-
-    public void SelectMisc(string miscName)
-    {
-        if (miscSelected) return;
-        miscSelected = true;
-        selectedMisc = miscName;
-        DisableButtonList(miscButtons);
-        TryCreatePotion();
-    }
-
-    public void SelectUsage(string usageName)
-    {
-        if (usageSelected) return;
-        usageSelected = true;
-        selectedUsage = usageName;
-        DisableButtonList(usageButtons);
-        TryCreatePotion();
-    }
-
-    private void DisableButtonList(Button[] buttons)
-    {
-        foreach (Button btn in buttons)
-        {
-            btn.interactable = false;
-        }
-    }
-
-    private void TryCreatePotion()
-    {
-        if (herbSelected && miscSelected && usageSelected)
-        {
-            CreatePotion();
-            CheckPotion(selectedHerb, selectedMisc, selectedUsage);
-        }
-    }
-    private void CreatePotion()
-    {
-        if (potionPrefab != null && potionSpawnPoint != null)
-        {
-            // **Duman efektini hemen başlat**
-            if (potionSmokePrefab != null)
-            {
-                potionSmokePrefab.transform.position = potionSpawnPoint.position; // Dumanın pozisyonunu belirle
-                potionSmokePrefab.SetActive(true); // Dumanı aç
-
-                ParticleSystem ps = potionSmokePrefab.GetComponent<ParticleSystem>();
-                if (ps != null)
-                {
-                    ps.Play(); // Duman efektini başlat
-                }
-            }
-
-            // **0.5 saniye bekleyip potion'u instantiate et**
-            StartCoroutine(SpawnPotionWithDelay(0.5f));
-        }
-    }
-
-    // **Potion spawn işlemini gecikmeli yapacak coroutine**
-    private IEnumerator SpawnPotionWithDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay); // 0.5 saniye bekle
-
-        Vector3 spawnPosition = potionSpawnPoint.position + new Vector3(0, 4f, 0);
-        currentPotion = Instantiate(potionPrefab, spawnPosition, Quaternion.identity);
-        Debug.Log($"İksir hazırlandı: {selectedHerb} + {selectedMisc} + {selectedUsage}");
-
-        // **Potion aşağı düşsün**
-        Rigidbody rb = currentPotion.GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            rb.useGravity = true; // Yerçekimini aç
-            rb.linearVelocity = Vector3.down * 2f; // Hafif bir düşüş efekti ver
+            symptom1 = parts[0].Trim();
+            symptom2 = parts[1].Trim();
         }
 
-        // **Dumanı belirli bir süre sonra kapat ve potion'u yok et**
-        StartCoroutine(DisableSmokeEffect(2f, 1f));
+        // Rastgele açılış ve kapanış cümleleri seç
+        string opener = openingSentences[UnityEngine.Random.Range(0, openingSentences.Length)];
+        string closer = closingSentences[UnityEngine.Random.Range(0, closingSentences.Length)];
+
+        // Hasta cümlesi: açılış + semptom1 + semptom2 + kapanış
+        string patientSentence = opener + " " + symptom1 + ". " + symptom2 + ". " + closer;
+
+        // Hasta bilgilerini güncelle (tedavi kontrolü için required değerler excel dosyanızdaki verilere göre)
+        patientScript.symptomText = patientSentence;
+        patientScript.requiredHerb = entry.Item1;
+        patientScript.requiredMisc = entry.Item2;
+        patientScript.requiredUsage = entry.Item3;
+
+        patientScript.UpdateSymptomUI();
     }
+}
 
-    // **Duman efektini kapatma ve potion'u yok etme**
-    private IEnumerator DisableSmokeEffect(float delay, float delay2)
+public void SelectHerb(string herbName)
+{
+    if (herbSelected) return;
+    herbSelected = true;
+    selectedHerb = herbName;
+    DisableButtonList(herbButtons);
+    TryCreatePotion();
+}
+
+public void SelectMisc(string miscName)
+{
+    if (miscSelected) return;
+    miscSelected = true;
+    selectedMisc = miscName;
+    DisableButtonList(miscButtons);
+    TryCreatePotion();
+}
+
+public void SelectUsage(string usageName)
+{
+    if (usageSelected) return;
+    usageSelected = true;
+    selectedUsage = usageName;
+    DisableButtonList(usageButtons);
+    TryCreatePotion();
+}
+
+private void DisableButtonList(Button[] buttons)
+{
+    foreach (Button btn in buttons)
     {
-        yield return new WaitForSeconds(delay); // İlk bekleme süresi (Duman devam edecek)
+        btn.interactable = false;
+    }
+}
 
+private void TryCreatePotion()
+{
+    if (herbSelected && miscSelected && usageSelected)
+    {
+        CreatePotion();
+        // Tedavi kontrolü: Patient2D içindeki CheckPotion metodu, excel dosyanızdaki verilerle uyumlu olarak
+        // seçilen iksir bileşenleri (selectedHerb, selectedMisc, selectedUsage) ile doğru tedavi kombinasyonunu karşılaştırır.
+        CheckPotion(selectedHerb, selectedMisc, selectedUsage);
+    }
+}
+
+private void CreatePotion()
+{
+    if (potionPrefab != null && potionSpawnPoint != null)
+    {
+        // Duman efektini hemen başlat
         if (potionSmokePrefab != null)
         {
-            potionSmokePrefab.SetActive(false); // Dumanı kapat
-        }
+            potionSmokePrefab.transform.position = potionSpawnPoint.position;
+            potionSmokePrefab.SetActive(true);
 
-        yield return new WaitForSeconds(delay2); // İksirin kaybolma süresi
-
-        if (currentPotion != null)
-        {
-            Destroy(currentPotion); // Potion'u yok et
-        }
-    }
-
-
-    public void CheckPotion(string herb, string misc, string usage)
-    {
-        Debug.Log("222222");
-        if (currentPatient != null)
-        {
-            Patient2D patientScript = currentPatient.GetComponent<Patient2D>();
-            if (patientScript != null)
+            ParticleSystem ps = potionSmokePrefab.GetComponent<ParticleSystem>();
+            if (ps != null)
             {
-                bool isCured = patientScript.CheckPotion(herb, misc, usage);
-                if (isCured)
-                {
-                    score += 10;
-                    if (correctSound != null) correctSound.Play();
-                }
-                else
-                {
-                    score -= 5;
-                    if (wrongSound != null) wrongSound.Play();
-                }
-                UpdateScoreUI();
-                StartCoroutine(HandlePatientOutcome(isCured));
+                ps.Play();
             }
         }
+
+        // 0.5 saniye bekleyip potion'u instantiate et
+        StartCoroutine(SpawnPotionWithDelay(0.5f));
+    }
+}
+
+private IEnumerator SpawnPotionWithDelay(float delay)
+{
+    yield return new WaitForSeconds(delay);
+
+    Vector3 spawnPosition = potionSpawnPoint.position + new Vector3(0, 4f, 0);
+    currentPotion = Instantiate(potionPrefab, spawnPosition, Quaternion.identity);
+    Debug.Log($"İksir hazırlandı: {selectedHerb} + {selectedMisc} + {selectedUsage}");
+
+    Rigidbody rb = currentPotion.GetComponent<Rigidbody>();
+    if (rb != null)
+    {
+        rb.useGravity = true;
+        rb.linearVelocity = Vector3.down * 2f;
     }
 
-    IEnumerator HandlePatientOutcome(bool isCured)
-    {
-        yield return new WaitForSeconds(2f);
+    StartCoroutine(DisableSmokeEffect(2f, 1f));
+}
 
-        Destroy(currentPatient);
-        ResetGame();
-        SpawnPatient();
+private IEnumerator DisableSmokeEffect(float delay, float delay2)
+{
+    yield return new WaitForSeconds(delay);
+
+    if (potionSmokePrefab != null)
+    {
+        potionSmokePrefab.SetActive(false);
     }
 
-    private void ResetGame()
-    {
-        selectedHerb = null;
-        selectedMisc = null;
-        selectedUsage = null;
-        herbSelected = false;
-        miscSelected = false;
-        usageSelected = false;
-        EnableButtonList(herbButtons);
-        EnableButtonList(miscButtons);
-        EnableButtonList(usageButtons);
-    }
+    yield return new WaitForSeconds(delay2);
 
-    private void EnableButtonList(Button[] buttons)
+    if (currentPotion != null)
     {
-        foreach (Button btn in buttons)
+        Destroy(currentPotion);
+    }
+}
+
+public void CheckPotion(string herb, string misc, string usage)
+{
+    Debug.Log("Tedavi kontrolü başlatıldı.");
+    if (currentPatient != null)
+    {
+        Patient2D patientScript = currentPatient.GetComponent<Patient2D>();
+        if (patientScript != null)
         {
-            btn.interactable = true;
+            bool isCured = patientScript.CheckPotion(herb, misc, usage);
+            if (isCured)
+            {
+                score += 10;
+                if (correctSound != null) correctSound.Play();
+            }
+            else
+            {
+                score -= 5;
+                if (wrongSound != null) wrongSound.Play();
+            }
+            UpdateScoreUI();
+            StartCoroutine(HandlePatientOutcome(isCured));
         }
     }
+}
 
-    void UpdateScoreUI()
+IEnumerator HandlePatientOutcome(bool isCured)
+{
+    yield return new WaitForSeconds(2f);
+
+    Destroy(currentPatient);
+    ResetGame();
+    SpawnPatient();
+}
+
+private void ResetGame()
+{
+    selectedHerb = null;
+    selectedMisc = null;
+    selectedUsage = null;
+    herbSelected = false;
+    miscSelected = false;
+    usageSelected = false;
+    EnableButtonList(herbButtons);
+    EnableButtonList(miscButtons);
+    EnableButtonList(usageButtons);
+}
+
+private void EnableButtonList(Button[] buttons)
+{
+    foreach (Button btn in buttons)
     {
-        if (scoreText != null)
-        {
-            scoreText.text = "Puan: " + score;
-        }
+        btn.interactable = true;
     }
+}
 
-    void PlayButtonClickSound()
+void UpdateScoreUI()
+{
+    if (scoreText != null)
     {
-        if (buttonClickSound != null)
-            buttonClickSound.Play();
+        scoreText.text = "Puan: " + score;
     }
+}
 
+void PlayButtonClickSound()
+{
+    if (buttonClickSound != null)
+        buttonClickSound.Play();
+}
 }
