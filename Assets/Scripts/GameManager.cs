@@ -81,6 +81,7 @@ public class GameManager : MonoBehaviour
 
         foreach (Button btn in herbButtons)
         {
+
             btn.onClick.AddListener(() => { SelectHerb(btn.GetComponentInChildren<TMP_Text>().text); PlayButtonClickSound(); });
         }
         foreach (Button btn in miscButtons)
@@ -97,7 +98,7 @@ public class GameManager : MonoBehaviour
     {
         if (patientPrefabs.Length > 0)
         {
-            if (currentPatient != null)
+            //if (currentPatient != null)
             {
                 Destroy(currentPatient);
             }
@@ -171,6 +172,7 @@ public class GameManager : MonoBehaviour
         if (herbSelected && miscSelected && usageSelected)
         {
             CreatePotion();
+            CheckPotion(selectedHerb, selectedMisc, selectedUsage);
         }
     }
     private void CreatePotion()
@@ -237,6 +239,7 @@ public class GameManager : MonoBehaviour
 
     public void CheckPotion(string herb, string misc, string usage)
     {
+        Debug.Log("222222");
         if (currentPatient != null)
         {
             Patient2D patientScript = currentPatient.GetComponent<Patient2D>();

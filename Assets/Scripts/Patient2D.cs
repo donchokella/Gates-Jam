@@ -75,6 +75,7 @@ public class Patient2D : MonoBehaviour
 
     public bool CheckPotion(string herb, string misc, string usage)
     {
+        Debug.Log("11111");
         if (herb == requiredHerb && misc == requiredMisc && usage == requiredUsage)
         {
             isCured = true;
